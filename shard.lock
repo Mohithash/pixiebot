@@ -1,0 +1,18 @@
+version: 1.0
+shards:
+  halite:
+    github: icyleaf/halite
+    commit: aa2257fdae5ca54b538971309c950344c84b5e36
+
+  pixie:
+    github: watzon/pixie
+    commit: b62d91c1d880a41b2d5deff9a590195d4e9ce161
+
+  strange:
+    github: hydecr/strange
+    commit: 92a1397575e33b60ab899c12d83f2866af1a3352
+
+  tourmaline:
+    github: watzon/tourmaline
+    commit: d91e0f8ec60780c593d5d88ed1981e28ef1df699
+

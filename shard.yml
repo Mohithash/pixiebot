@@ -1,0 +1,21 @@
+name: pixie_bot
+version: 0.1.0
+
+authors:
+  - Chris Watson <cawatson1993@gmail.com>
+
+targets:
+  pixie_bot:
+    main: src/pixie_bot.cr
+
+dependencies:
+  tourmaline:
+    github: watzon/tourmaline
+    branch: master
+  pixie:
+    github: watzon/pixie
+    branch: master
+
+crystal: 0.33.0
+
+license: MIT

@@ -6,7 +6,7 @@ shards:
 
   pixie:
     github: watzon/pixie
-    commit: 1c571e65c565e858503253fa3684fb4e8c5c1859
+    commit: 0285395f6bbc71f70c0befc1ffb9560595125c16
 
   strange:
     github: hydecr/strange

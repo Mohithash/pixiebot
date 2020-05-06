@@ -34,159 +34,179 @@ IMAGES = {} of Int64 => Pixie::ImageSet
 
 class PixieBot < Tourmaline::Client
   @[Command("start")]
-  def start_command(ctx)
-    ctx.reply(START_TEXT, parse_mode: :markdown)
+  def start_command(client, update)
+    if message = update.message
+      message.reply(START_TEXT, parse_mode: :markdown)
+    end
   end
 
   @[Command("help")]
-  def help_command(ctx)
-    ctx.reply(HELP_TEXT, parse_mode: :markdown)
+  def help_command(client, update)
+    if message = update.message
+      message.reply(HELP_TEXT, parse_mode: :markdown)
+    end
   end
 
   @[Command("load")]
-  def load_command(ctx)
-    return ctx.respond("You already have an image loaded. Please /cancel " +
-                       "that one before loading a new one.",
-                       parse_mode: :markdown) if IMAGES.has_key?(ctx.message.from.not_nil!.id)
-    buffer = message_photo_to_buffer(ctx)
-    return ctx.respond("Please reply to a message with the image you want to load.") unless buffer
-    set = Pixie::ImageSet.new(buffer)
-    IMAGES[ctx.message.from.not_nil!.id] = set
-    ctx.respond("Image loaded successfully. Use /finish to download your completed image when you're done.")
+  def load_command(client, update)
+    if message = update.message
+      uid = message.from.not_nil!.id
+      buffer = message_photo_to_buffer(update)
+      return message.respond("Please reply to a message with the image you want to load.") unless buffer
+      set = Pixie::ImageSet.new(buffer)
+      if IMAGES.has_key?(uid)
+        IMAGES[uid].add_image(set)
+        IMAGES[uid] = set
+        message.respond("Image added successfully to set.")
+      else
+        IMAGES[uid] = set
+        message.respond("Image loaded successfully. Use /finish to download your completed image when you're done.")
+      end
+    end
   rescue e
-    ctx.respond(e.message)
+    if message = update.message
+      message.respond(e.message)
+    end
   end
 
   @[Command("cancel")]
-  def cancel_command(ctx)
-    return unless assert_loaded(ctx)
-    IMAGES.delete(ctx.message.from.not_nil!.id)
-    ctx.respond("Operation canceled.")
+  def cancel_command(client, update)
+    if message = update.message
+      return unless assert_loaded(message)
+      IMAGES.delete(message.from.not_nil!.id)
+      message.respond("Operation canceled.")
+    end
   end
 
   @[Command("info")]
-  def info_command(ctx)
-    return unless assert_loaded(ctx)
-    set = IMAGES[ctx.message.from.not_nil!.id]
-    info = String.build do |str|
-      str.puts "```"
-      str.puts "- Signature: " + set.image_signature
-      str.puts "- Format: " + set.image_format
-      str.puts "- Width: " + set.image_width.to_s
-      str.puts "- Height: " + set.image_height.to_s
-      str.puts "- Colors: " + set.image_colors.to_s
-      str.puts "- Compression Quality: " + set.image_compression_quality.to_s
-      str.puts "- Delay: " + set.image_delay.to_s
-      str.puts "- Depth: " + set.image_depth.to_s
-      str.puts "- Iterations: " + set.image_iterations.to_s
-      str.puts "- Scene: " + set.image_scene.to_s
-      str.puts "- Ticks Per Second: " + set.image_ticks_per_second.to_s
-      str.puts "- Image Count: " + set.n_images.to_s
-      str.puts "- Compression: " + set.image_compression.to_s
-      str.puts "- Type: " + set.image_type.to_s
-      str.puts "```"
+  def info_command(client, update)
+    if message = update.message
+      return unless assert_loaded(message)
+      set = IMAGES[message.from.not_nil!.id]
+      info = String.build do |str|
+        str.puts "```"
+        str.puts "- Signature: " + set.image_signature
+        str.puts "- Format: " + set.image_format
+        str.puts "- Width: " + set.image_width.to_s
+        str.puts "- Height: " + set.image_height.to_s
+        str.puts "- Colors: " + set.image_colors.to_s
+        str.puts "- Compression Quality: " + set.image_compression_quality.to_s
+        str.puts "- Delay: " + set.image_delay.to_s
+        str.puts "- Depth: " + set.image_depth.to_s
+        str.puts "- Iterations: " + set.image_iterations.to_s
+        str.puts "- Scene: " + set.image_scene.to_s
+        str.puts "- Ticks Per Second: " + set.image_ticks_per_second.to_s
+        str.puts "- Image Count: " + set.n_images.to_s
+        str.puts "- Compression: " + set.image_compression.to_s
+        str.puts "- Type: " + set.image_type.to_s
+        str.puts "```"
+      end
+      message.respond(info, parse_mode: :markdown)
     end
-    ctx.respond(info, parse_mode: :markdown)
   end
 
   @[Command("resize")]
-  def resize_command(ctx)
-    return unless assert_loaded(ctx)
-    params = ctx.text.strip.split(/\s+/)
+  def resize_command(client, update)
+    if message = update.message
+      return unless assert_loaded(message)
+      params = update.context["text"].as_s.to_s.strip.split(/\s+/)
 
-    if params.empty?
-      return ctx.respond("I at least need a width to resize to.")
-    end
-
-    width = params[0]
-    height = params[1]? || width
-    keep_aspect = params[2]? || "false"
-
-    begin
-      width = width.to_u32
-      height = height.to_u32
-    rescue
-      return ctx.respond("Width and height parameters must be positive integers.")
-    end
-
-    if aspect = keep_aspect
-      if aspect.downcase.match(/t(rue)?|y(es)?/)
-        keep_aspect = true
-      elsif aspect.downcase.match(/f(alse)?|no?/)
-        keep_aspect = false
-      else
-        ctx.respond("Unrecognized value for `aspect_ignore` parameter. Defaulting to false.")
-        keep_aspect = false
+      if params.empty?
+        return message.respond("I at least need a width to resize to.")
       end
+
+      width = params[0]
+      height = params[1]? || width
+      keep_aspect = params[2]? || "false"
+
+      begin
+        width = width.to_u32
+        height = height.to_u32
+      rescue
+        return message.respond("Width and height parameters must be positive integers.")
+      end
+
+      if aspect = keep_aspect
+        if aspect.downcase.match(/t(rue)?|y(es)?/)
+          keep_aspect = true
+        elsif aspect.downcase.match(/f(alse)?|no?/)
+          keep_aspect = false
+        else
+          message.respond("Unrecognized value for `aspect_ignore` parameter. Defaulting to false.")
+          keep_aspect = false
+        end
+      end
+
+      set = IMAGES[message.from.not_nil!.id]
+
+      if keep_aspect
+        set.scale_image(width, height)
+      else
+        set.resize_image(width, height, :cubic)
+      end
+
+      message.reply("Resized to #{set.image_width} x #{set.image_height}")
     end
-
-    set = IMAGES[ctx.message.from.not_nil!.id]
-
-    if keep_aspect
-      set.scale_image(width, height)
-    else
-      set.resize_image(width, height, :cubic)
-    end
-
-    ctx.reply("Resized to #{set.image_width} x #{set.image_height}")
   end
 
   @[Command("finish")]
-  def finish_command(ctx)
-    return unless assert_loaded(ctx)
-    format = ctx.text.strip.split(/\s+/, 2).first.downcase
-    if format.empty?
-      return ctx.respond("Please use the format `/finish ext` where `ext` is the format you want to save the image as.")
+  def finish_command(client, update)
+    if message = update.message
+      return unless assert_loaded(message)
+      format = update.context["text"].as_s.strip.split(/\s+/, 2).first.downcase
+      if format.empty?
+        return message.respond("Please use the format `/finish ext` where `ext` is the format you want to save the image as.")
+      end
+
+      set = IMAGES[message.from.not_nil!.id]
+      set.rewind
+      set.combine_images(LibMagick::ColorspaceType::RGB)
+      set.image_format = format.upcase
+      blob = set.image_blob
+
+      file = ::File.tempfile(nil, ".#{format}")
+      file.write(blob)
+      file.rewind
+
+      message.chat.send_chat_action(:upload_document)
+      message.respond_with_document(file)
+      file.delete
+      IMAGES.delete(message.from.not_nil!.id)
     end
-
-    set = IMAGES[ctx.message.from.not_nil!.id]
-    set.image_format = format.upcase
-    blob = set.image_blob
-
-    file = ::File.tempfile(nil, ".#{format}")
-    file.write(blob)
-    file.rewind
-
-    ctx.chat.send_chat_action(:upload_document)
-    ctx.respond_with_document(file)
-    file.delete
-    IMAGES.delete(ctx.message.from.not_nil!.id)
   end
 
-  def assert_loaded(ctx)
-    unless IMAGES.has_key?(ctx.message.from.not_nil!.id)
-      ctx.respond("No image loaded. Please reply to an image with /load to get started.")
+  def assert_loaded(message)
+    unless IMAGES.has_key?(message.from.not_nil!.id)
+      message.respond("No image loaded. Please reply to an image with /load to get started.")
       return false
     end
     true
   end
 
-  private def message_photo_to_buffer(ctx)
-    if message = ctx.message.reply_message
-      if message.photo.size > 0
-        photo = message.photo.max_by(&.file_size)
-      elsif document = message.document
+  private def message_photo_to_buffer(update)
+    if (message = update.message) && (reply = message.reply_message)
+      if reply.photo.size > 0
+        photo = reply.photo.max_by(&.file_size)
+      elsif document = reply.document
         photo = document
-      elsif sticker = message.sticker
+      elsif sticker = reply.sticker
         photo = sticker
       else
         raise "Please respond to a message with a photo."
       end
 
-      if file = ctx.get_file(photo.file_id)
+      if file = get_file(photo.file_id)
         if (file_path = file.file_path) && file_path.ends_with?(".tgs")
           raise "Animated stickers are not supported at this time."
         end
-        file_link = ctx.get_file_link(file).not_nil!
+        file_link = get_file_link(file).not_nil!
         response = HTTP::Client.get(file_link)
         return response.body.to_slice
       end
     end
 
-    parts = ctx.text.to_s.split(/\s+/, 2)
-    puts parts
-    if (url = parts[1]?) && (url.match(/^(ftp|https?):\/\//))
-      puts url
+    url = update.context["text"].as_s
+    if !url.empty? && url.match(/^(ftp|https?):\/\//)
       response = HTTP::Client.get(url)
       if response.status_code > 299
         puts "Status code: #{response.status_code}"

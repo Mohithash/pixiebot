@@ -1,18 +1,14 @@
 version: 1.0
 shards:
-  halite:
-    github: icyleaf/halite
-    commit: aa2257fdae5ca54b538971309c950344c84b5e36
+  db:
+    github: crystal-lang/crystal-db
+    version: 0.9.0
 
   pixie:
     github: watzon/pixie
     commit: 0285395f6bbc71f70c0befc1ffb9560595125c16
 
-  strange:
-    github: hydecr/strange
-    commit: 92a1397575e33b60ab899c12d83f2866af1a3352
-
   tourmaline:
     github: watzon/tourmaline
-    commit: d91e0f8ec60780c593d5d88ed1981e28ef1df699
+    commit: 86fb7dc7d5ebc69a7c2a2bce094e3b4fcfabdce2
 
